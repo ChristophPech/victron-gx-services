@@ -155,7 +155,9 @@ class BMSService:
       a_internal_comm_fail    = b3 & (1<<3)
       a_charge_highcurrent    = b3 & (1<<0)
 
-      b4 = msg.data[4] #01
+      num_batteries=int.from_bytes([msg.data[4]], byteorder='little', signed=False)
+      self._dbusservice['/System/NrOfModulesOnline']=num_batteries
+      
       b5 = msg.data[5] #50
       b6 = msg.data[6] #4e
       
@@ -314,7 +316,7 @@ def main():
       '/System/MaxCellTemperature': {'initial': None, 'textformat': _c},
       '/System/MaxTemperatureCellId': {'initial': "n/a", 'textformat': _s},
       '/System/NrOfCellsPerBattery': {'initial': "16", 'textformat': _n},
-      '/System/NrOfModulesOnline': {'initial': 1, 'textformat': _s},
+      '/System/NrOfModulesOnline': {'initial': 0, 'textformat': _s},
       '/System/NrOfModulesOffline': {'initial': 0, 'textformat': _s},
       '/System/NrOfModulesBlockingCharge': {'initial': 0, 'textformat': _s},
       '/System/NrOfModulesBlockingDischarge': {'initial': 0, 'textformat': _s},
