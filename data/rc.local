@@ -1,0 +1,4 @@
+ln -s /data/gridmeter/service /service/gridmeter
+ln -s /data/solarmeter/service /service/solarmeter
+ln -s /data/bms/service /service/bms
+
