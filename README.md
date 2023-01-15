@@ -1,1 +1,6 @@
 # victron-gx-services
+
+virtual venus-os services:
+ * gridmeter - simulates a victron smart meter from querying a tasmota
+ * solarmeter - simulates a solarinverter from querying several homeassistant states
+ * bms - simulates a BMS from a chinese CAN battery with pylontech protocol (somehow the pylontech protocol between the battery and the gx only works half, so I manually translated everything for the gx)
