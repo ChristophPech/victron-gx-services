@@ -12,7 +12,7 @@ virtual venus-os services:
 - modify the python files to match your network addresses etc.
 - copy or merge the data/rc.local to /data/rc.local and remove the unneeded services
 
-For the BMS you also need python-can, to install it you need pip3 
+For the BMS you also need python-can
 ```
 okpgk install pip
 pip3 install python-can
