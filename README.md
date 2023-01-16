@@ -17,3 +17,8 @@ For the BMS you also need python-can
 okpgk install pip
 pip3 install python-can
 ```
+
+![Battery](https://github.com/ChristophPech/victron-gx-services/blob/main/doc/Battery.png?raw=true)
+![Details](https://github.com/ChristophPech/victron-gx-services/blob/main/doc/Details.png?raw=true)
+![IO](https://github.com/ChristophPech/victron-gx-services/blob/main/doc/IO.png?raw=true)
+![Alarms](https://github.com/ChristophPech/victron-gx-services/blob/main/doc/Alarms.png?raw=true)
