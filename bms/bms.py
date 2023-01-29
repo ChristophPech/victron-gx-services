@@ -48,7 +48,8 @@ class BMSService:
       self._dbusservice.add_path(
         path, settings['initial'], gettextcallback=settings['textformat'], writeable=True, onchangecallback=self._handlechangedvalue)
 
-    gobject.timeout_add(500, self._update) 
+    self._watchdog=0
+    gobject.timeout_add(1000, self._update) 
 
     self._bus = can.interface.Bus("can8", bustype="socketcan")
     self._notifier = can.Notifier(self._bus, [self.on_message_received])
@@ -96,7 +97,13 @@ class BMSService:
       else:
         self._dbusservice['/Io/AllowToDischarge']=0
 
-      self._dbusservice['/SystemSwitch']=1
+      if (enable_charge and enable_discharge):
+        self._dbusservice['/SystemSwitch']=1
+      else:
+        self._dbusservice['/SystemSwitch']=0
+
+      self._watchdog=0
+      #print("enabled:",self._dbusservice['/SystemSwitch'])
 
       return
 
@@ -253,7 +260,15 @@ class BMSService:
 
   def _update(self):
     try:
-      a=1
+      self._watchdog += 1
+      if self._watchdog>10:
+        #battery turned off
+        self._dbusservice['/Io/AllowToCharge']=0
+        self._dbusservice['/Io/AllowToDischarge']=0
+        self._dbusservice['/SystemSwitch']=0
+        self._dbusservice['/System/NrOfModulesOnline']=0
+        logging.error("BMS offline: {}s".format(self._watchdog))
+
       #self._dbusservice['/Soc'] = 32
       #logging.info("House Consumption: {:.0f}".format(meter_consumption))
     except:
