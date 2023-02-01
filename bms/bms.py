@@ -9,6 +9,7 @@ import os
 import requests # for http GET
 import _thread as thread   # for daemon = True  / Python 3.x
 import can
+from paho.mqtt import client as mqtt_client
 
 # Victron packages
 sys.path.insert(1, os.path.join(os.path.dirname(__file__), '/opt/victronenergy/dbus-systemcalc-py/ext/velib_python'))
@@ -54,6 +55,8 @@ class BMSService:
     self._bus = can.interface.Bus("can8", bustype="socketcan")
     self._notifier = can.Notifier(self._bus, [self.on_message_received])
 
+    self.connect_mqtt()
+
   def on_message_received(self, msg):
 
     if msg.arbitration_id == 0x355 : 
@@ -71,10 +74,13 @@ class BMSService:
       t_l=int.from_bytes([msg.data[2], msg.data[3]], byteorder='little', signed=False)
       v_h=int.from_bytes([msg.data[4], msg.data[5]], byteorder='little', signed=False)
       v_l=int.from_bytes([msg.data[6], msg.data[7]], byteorder='little', signed=False)
-      self._dbusservice['/System/MinCellVoltage'] = float(v_l)
-      self._dbusservice['/System/MaxCellVoltage'] = float(v_h)
+      self._dbusservice['/System/MinCellVoltage'] = float(v_l)/1000
+      self._dbusservice['/System/MaxCellVoltage'] = float(v_h)/1000
       self._dbusservice['/System/MinCellTemperature'] = float(t_l)/10
       self._dbusservice['/System/MaxCellTemperature'] = float(t_h)/10
+
+      self._mqtt_client.publish("victron/bms/MinCellVoltage",self._dbusservice['/System/MinCellVoltage']);
+      self._mqtt_client.publish("victron/bms/MaxCellVoltage",self._dbusservice['/System/MaxCellVoltage']);
       return
 
     if msg.arbitration_id == 0x35c : #Request flags
@@ -278,6 +284,20 @@ class BMSService:
     self._dbusservice['/UpdateIndex'] = (self._dbusservice['/UpdateIndex'] + 1 ) % 256
     return True
 
+  def connect_mqtt(self):
+      def on_connect(client, userdata, flags, rc):
+          if rc == 0:
+              print("Connected to MQTT Broker!")
+          else:
+              print("Failed to connect, return code %d\n", rc)
+
+      self._mqtt_client = mqtt_client.Client("victron-bms")
+      self._mqtt_client.username_pw_set("chp", "homegrow")
+      self._mqtt_client.on_connect = on_connect
+      self._mqtt_client.connect("192.168.0.10", 1883)
+      self._mqtt_client.loop_start()
+      print("Connecing to MQTT ...")
+      return self._mqtt_client
 
 def main():
   logging.basicConfig(level=logging.INFO) # use .INFO for less logging
@@ -296,6 +316,7 @@ def main():
   _ah = lambda p, v: (str(round(v, 1)) + ' Ah')
   _w = lambda p, v: (str(round(v, 1)) + ' W')
   _v = lambda p, v: (str(round(v, 1)) + ' V')
+  _v3 = lambda p, v: (str(round(v, 3)) + ' V')
   _mv = lambda p, v: (str(int(v)) + ' mV')
   _c = lambda p, v: (str(round(v, 1)) + ' °C')
   _p = lambda p, v: (str(round(v, 1)) + ' %')
@@ -322,9 +343,9 @@ def main():
       '/InstalledCapacity': {'initial': 130, 'textformat': _ah},
       '/SystemSwitch': {'initial': None, 'textformat': _n},
 
-      '/System/MinCellVoltage': {'initial': None, 'textformat': _mv},
+      '/System/MinCellVoltage': {'initial': None, 'textformat': _v3},
       '/System/MinVoltageCellId': {'initial': "n/a", 'textformat': _s},
-      '/System/MaxCellVoltage': {'initial': None, 'textformat': _mv},
+      '/System/MaxCellVoltage': {'initial': None, 'textformat': _v3},
       '/System/MaxVoltageCellId': {'initial': "n/a", 'textformat': _s},
       '/System/MinCellTemperature': {'initial': None, 'textformat': _c},
       '/System/MinTemperatureCellId': {'initial': "n/a", 'textformat': _s},
