@@ -14,7 +14,8 @@ virtual venus-os services:
 
 For the BMS you also need python-can
 ```
-okpgk install pip
+opkg update
+opkg install python3-pip
 pip3 install python-can
 ```
 
