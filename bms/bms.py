@@ -45,6 +45,11 @@ class BMSService:
     self._dbusservice.add_path('/Position', 0)
     self._dbusservice.add_path('/UpdateIndex', 0)
 
+    self._vmin=0
+    self._vmax=4
+    self._ccl=0
+    self._dcl=0
+
     for path, settings in self._paths.items():
       self._dbusservice.add_path(
         path, settings['initial'], gettextcallback=settings['textformat'], writeable=True, onchangecallback=self._handlechangedvalue)
@@ -63,6 +68,7 @@ class BMSService:
       if msg.dlc < 4 : return
       soc=int.from_bytes([msg.data[0], msg.data[1]], byteorder='little', signed=False)
       soh=int.from_bytes([msg.data[2], msg.data[3]], byteorder='little', signed=False)
+      #soc=soc*0.8
       self._dbusservice['/Soc'] = soc 
       self._dbusservice['/Soh'] = soh
       self._dbusservice['/Capacity'] = 130.0 * (soc/100)
@@ -74,13 +80,15 @@ class BMSService:
       t_l=int.from_bytes([msg.data[2], msg.data[3]], byteorder='little', signed=False)
       v_h=int.from_bytes([msg.data[4], msg.data[5]], byteorder='little', signed=False)
       v_l=int.from_bytes([msg.data[6], msg.data[7]], byteorder='little', signed=False)
-      self._dbusservice['/System/MinCellVoltage'] = float(v_l)/1000
-      self._dbusservice['/System/MaxCellVoltage'] = float(v_h)/1000
+      self._vmin = float(v_l)/1000
+      self._vmax = float(v_h)/1000
+      self._dbusservice['/System/MinCellVoltage'] = self._vmin
+      self._dbusservice['/System/MaxCellVoltage'] = self._vmax
       self._dbusservice['/System/MinCellTemperature'] = float(t_l)/10
       self._dbusservice['/System/MaxCellTemperature'] = float(t_h)/10
 
-      self._mqtt_client.publish("victron/bms/MinCellVoltage",self._dbusservice['/System/MinCellVoltage']);
-      self._mqtt_client.publish("victron/bms/MaxCellVoltage",self._dbusservice['/System/MaxCellVoltage']);
+      self._mqtt_client.publish("victron/bms/MinCellVoltage",self._vmin);
+      self._mqtt_client.publish("victron/bms/MaxCellVoltage",self._vmax);
       return
 
     if msg.arbitration_id == 0x35c : #Request flags
@@ -91,6 +99,11 @@ class BMSService:
       req_force_charge1   = b0 & (1<<5)
       enable_discharge    = b0 & (1<<6)
       enable_charge       = b0 & (1<<7)
+
+      if self._ccl<=0:
+        enable_charge=0
+      if self._dcl<=0:
+        enable_discharge=0
 
       #enable_charge=False
       if enable_charge:
@@ -123,11 +136,44 @@ class BMSService:
       #print(a_charge)
       #a_charge=50 #limit to 5A
       #a_charge=250 #limit to 25A
+      soc=self._dbusservice['/Soc']
+      ccl=float(a_charge)/10
+      dcl=float(a_discharge)/10
+      ccl=min(ccl,25)
+      dcl=min(dcl,45)
+      if self._vmax>=3.60: ccl=min(ccl,0)
+      if self._vmax>=3.55: ccl=min(ccl,0)
+      if self._vmax>=3.54: ccl=min(ccl,0.25)
+      if self._vmax>=3.53: ccl=min(ccl,0.5)
+      if self._vmax>=3.52: ccl=min(ccl,0.6)
+      if self._vmax>=3.51: ccl=min(ccl,0.75)
+      if self._vmax>=3.50: ccl=min(ccl,1)
+      if self._vmax>=3.49: ccl=min(ccl,2)
+      if self._vmax>=3.48: ccl=min(ccl,5)
+      if self._vmax>=3.47: ccl=min(ccl,10)
+      if self._vmax>=3.46: ccl=min(ccl,15)
+      if self._vmax>=3.45: ccl=min(ccl,20)
+
+      if self._vmin<=3.10: dcl=min(dcl,12)
+      if self._vmin<=3.00: dcl=min(dcl,7)
+      if self._vmin<=2.90: dcl=min(dcl,4)
+      if self._vmin<=2.80: dcl=min(dcl,2)
+      if self._vmin<=2.70: dcl=0
+
+      self._ccl=ccl
+      self._dcl=dcl
+
+      if ccl<=0:
+        self._dbusservice['/Io/AllowToCharge']=0
+      if dcl<=0:
+        self._dbusservice['/Io/AllowToDischarge']=0
 
       self._dbusservice['/Info/BatteryLowVoltage'] = float(v_discharge)/10
-      self._dbusservice['/Info/MaxChargeCurrent'] = float(a_charge)/10
+      self._dbusservice['/Info/MaxChargeCurrent'] = ccl
       self._dbusservice['/Info/MaxChargeVoltage'] = float(v_charge)/10
-      self._dbusservice['/Info/MaxDischargeCurrent'] = float(a_discharge)/10
+      self._dbusservice['/Info/MaxDischargeCurrent'] = dcl
+
+
       return
 
     if msg.arbitration_id == 0x356 : #Voltage / Current / Temp
@@ -139,6 +185,11 @@ class BMSService:
       self._dbusservice['/Dc/0/Voltage'] = float(v)/100
       self._dbusservice['/Dc/0/Current'] = float(c)/10
       self._dbusservice['/Dc/0/Power'] = float(c)/10 * float(v)/100
+
+      if self._dbusservice['/Dc/0/Voltage']>self._vmax:
+        self._vmax=self._dbusservice['/Dc/0/Voltage']
+      if self._dbusservice['/Dc/0/Voltage']<self._vmin:
+        self._vmin=self._dbusservice['/Dc/0/Voltage']
       #print(v,c,t)
       return
 
@@ -365,7 +416,7 @@ def main():
       '/Info/BatteryLowVoltage': {'initial': None, 'textformat': _v},
       '/Info/MaxChargeCurrent': {'initial': None, 'textformat': _a},
       '/Info/MaxChargeVoltage': {'initial': None, 'textformat': _v},
-      '/Info/MaxDischargeCurrent': {'initial': None, 'textformat': _c},
+      '/Info/MaxDischargeCurrent': {'initial': None, 'textformat': _a},
     }
 
   pvac_output = BMSService(servicename='com.victronenergy.battery.ttyO0',deviceinstance=40,paths=_paths)
