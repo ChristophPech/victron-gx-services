@@ -68,7 +68,7 @@ class BMSService:
       if msg.dlc < 4 : return
       soc=int.from_bytes([msg.data[0], msg.data[1]], byteorder='little', signed=False)
       soh=int.from_bytes([msg.data[2], msg.data[3]], byteorder='little', signed=False)
-      #soc=soc*0.8
+      #soc=soc*0.95
       self._dbusservice['/Soc'] = soc 
       self._dbusservice['/Soh'] = soh
       self._dbusservice['/Capacity'] = 130.0 * (soc/100)
@@ -105,7 +105,7 @@ class BMSService:
       if self._dcl<=0:
         enable_discharge=0
 
-      #enable_charge=False
+      #enable_charge=True
       if enable_charge:
         self._dbusservice['/Io/AllowToCharge']=1
       else:
@@ -139,16 +139,16 @@ class BMSService:
       soc=self._dbusservice['/Soc']
       ccl=float(a_charge)/10
       dcl=float(a_discharge)/10
-      ccl=min(ccl,25)
-      dcl=min(dcl,45)
+      ccl=min(ccl,35)
+      #dcl=min(dcl,45)
       if self._vmax>=3.60: ccl=min(ccl,0)
-      if self._vmax>=3.55: ccl=min(ccl,0)
-      if self._vmax>=3.54: ccl=min(ccl,0.25)
-      if self._vmax>=3.53: ccl=min(ccl,0.5)
-      if self._vmax>=3.52: ccl=min(ccl,0.6)
-      if self._vmax>=3.51: ccl=min(ccl,0.75)
-      if self._vmax>=3.50: ccl=min(ccl,1)
-      if self._vmax>=3.49: ccl=min(ccl,2)
+      if self._vmax>=3.58: ccl=min(ccl,0)
+      if self._vmax>=3.57: ccl=min(ccl,0.5)
+      if self._vmax>=3.54: ccl=min(ccl,1)
+      if self._vmax>=3.53: ccl=min(ccl,1.5)
+      if self._vmax>=3.51: ccl=min(ccl,2)
+      if self._vmax>=3.50: ccl=min(ccl,3)
+      if self._vmax>=3.49: ccl=min(ccl,4)
       if self._vmax>=3.48: ccl=min(ccl,5)
       if self._vmax>=3.47: ccl=min(ccl,10)
       if self._vmax>=3.46: ccl=min(ccl,15)
@@ -159,6 +159,8 @@ class BMSService:
       if self._vmin<=2.90: dcl=min(dcl,4)
       if self._vmin<=2.80: dcl=min(dcl,2)
       if self._vmin<=2.70: dcl=0
+
+      if ccl>self._ccl-1: ccl=self._ccl+1
 
       self._ccl=ccl
       self._dcl=dcl
