@@ -49,6 +49,7 @@ class BMSService:
     self._vmax=4
     self._ccl=0
     self._dcl=0
+    self._numonline=0
 
     for path, settings in self._paths.items():
       self._dbusservice.add_path(
@@ -139,28 +140,31 @@ class BMSService:
       soc=self._dbusservice['/Soc']
       ccl=float(a_charge)/10
       dcl=float(a_discharge)/10
+      #print("a ccl:",ccl," dcl:",dcl)
       ccl=min(ccl,35)
-      #dcl=min(dcl,45)
+      dcl=min(dcl,60)
       if self._vmax>=3.60: ccl=min(ccl,0)
-      if self._vmax>=3.58: ccl=min(ccl,0)
-      if self._vmax>=3.57: ccl=min(ccl,0.5)
-      if self._vmax>=3.54: ccl=min(ccl,1)
-      if self._vmax>=3.53: ccl=min(ccl,1.5)
-      if self._vmax>=3.51: ccl=min(ccl,2)
-      if self._vmax>=3.50: ccl=min(ccl,3)
-      if self._vmax>=3.49: ccl=min(ccl,4)
-      if self._vmax>=3.48: ccl=min(ccl,5)
-      if self._vmax>=3.47: ccl=min(ccl,10)
-      if self._vmax>=3.46: ccl=min(ccl,15)
-      if self._vmax>=3.45: ccl=min(ccl,20)
+      if self._vmax>=3.58: ccl=min(ccl,self._numonline*0.5)
+      if self._vmax>=3.57: ccl=min(ccl,self._numonline*1.0)
+      if self._vmax>=3.54: ccl=min(ccl,self._numonline*1.5)
+      if self._vmax>=3.53: ccl=min(ccl,self._numonline*2.0)
+      if self._vmax>=3.52: ccl=min(ccl,self._numonline*2.5)
+      if self._vmax>=3.50: ccl=min(ccl,self._numonline*3)
+      if self._vmax>=3.49: ccl=min(ccl,self._numonline*4)
+      if self._vmax>=3.48: ccl=min(ccl,self._numonline*5)
+      if self._vmax>=3.47: ccl=min(ccl,self._numonline*10)
+      if self._vmax>=3.46: ccl=min(ccl,self._numonline*15)
+      if self._vmax>=3.45: ccl=min(ccl,self._numonline*20)
 
-      if self._vmin<=3.10: dcl=min(dcl,12)
-      if self._vmin<=3.00: dcl=min(dcl,7)
-      if self._vmin<=2.90: dcl=min(dcl,4)
-      if self._vmin<=2.80: dcl=min(dcl,2)
+      if self._vmin<=3.10: dcl=min(dcl,self._numonline*12)
+      if self._vmin<=3.00: dcl=min(dcl,self._numonline*7)
+      if self._vmin<=2.90: dcl=min(dcl,self._numonline*4)
+      if self._vmin<=2.80: dcl=min(dcl,self._numonline*2)
       if self._vmin<=2.70: dcl=0
 
-      if ccl>self._ccl-1: ccl=self._ccl+1
+      #print("b ccl:",ccl," dcl:",dcl)
+      if ccl>self._ccl+1: ccl=self._ccl+1
+      if dcl>self._dcl+1: dcl=self._dcl+1
 
       self._ccl=ccl
       self._dcl=dcl
@@ -221,8 +225,8 @@ class BMSService:
       a_internal_comm_fail    = b3 & (1<<3)
       a_charge_highcurrent    = b3 & (1<<0)
 
-      num_batteries=int.from_bytes([msg.data[4]], byteorder='little', signed=False)
-      self._dbusservice['/System/NrOfModulesOnline']=num_batteries
+      self._numonline=int.from_bytes([msg.data[4]], byteorder='little', signed=False)
+      self._dbusservice['/System/NrOfModulesOnline']=self._numonline
       
       b5 = msg.data[5] #50
       b6 = msg.data[6] #4e
