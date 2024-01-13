@@ -50,6 +50,8 @@ class BMSService:
     self._ccl=0
     self._dcl=0
     self._numonline=0
+    self._tmin=0
+    self._tmax=0
 
     for path, settings in self._paths.items():
       self._dbusservice.add_path(
@@ -83,10 +85,13 @@ class BMSService:
       v_l=int.from_bytes([msg.data[6], msg.data[7]], byteorder='little', signed=False)
       self._vmin = float(v_l)/1000
       self._vmax = float(v_h)/1000
+      self._tmin=float(t_l)/10
+      self._tmax=float(t_h)/10
+
       self._dbusservice['/System/MinCellVoltage'] = self._vmin
       self._dbusservice['/System/MaxCellVoltage'] = self._vmax
-      self._dbusservice['/System/MinCellTemperature'] = float(t_l)/10
-      self._dbusservice['/System/MaxCellTemperature'] = float(t_h)/10
+      self._dbusservice['/System/MinCellTemperature'] = self._tmin
+      self._dbusservice['/System/MaxCellTemperature'] = self._tmax
 
       self._mqtt_client.publish("victron/bms/MinCellVoltage",self._vmin);
       self._mqtt_client.publish("victron/bms/MaxCellVoltage",self._vmax);
@@ -161,6 +166,15 @@ class BMSService:
       if self._vmin<=2.90: dcl=min(dcl,self._numonline*4)
       if self._vmin<=2.80: dcl=min(dcl,self._numonline*2)
       if self._vmin<=2.70: dcl=0
+
+      if self._tmin<=10: ccl=min(ccl,self._numonline*8)
+      if self._tmin<=8: ccl=min(ccl,self._numonline*7)
+      if self._tmin<=6: ccl=min(ccl,self._numonline*5)
+      if self._tmin<=5: ccl=min(ccl,self._numonline*3)
+      if self._tmin<=4: ccl=min(ccl,self._numonline*2)
+      if self._tmin<=3: ccl=min(ccl,self._numonline*1)
+      if self._tmin<=2: ccl=min(ccl,self._numonline*0.5)
+      if self._tmin<=1: ccl=0
 
       #print("b ccl:",ccl," dcl:",dcl)
       if ccl>self._ccl+1: ccl=self._ccl+1
