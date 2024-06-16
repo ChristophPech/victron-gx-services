@@ -164,17 +164,28 @@ class BMSService:
       if self._vmin<=3.10: dcl=min(dcl,self._numonline*12)
       if self._vmin<=3.00: dcl=min(dcl,self._numonline*7)
       if self._vmin<=2.90: dcl=min(dcl,self._numonline*4)
-      if self._vmin<=2.80: dcl=min(dcl,self._numonline*2)
-      if self._vmin<=2.70: dcl=0
+      if self._vmin<=2.85: dcl=min(dcl,self._numonline*2)
+      if self._vmin<=2.80: dcl=0
 
-      if self._tmin<=10: ccl=min(ccl,self._numonline*8)
-      if self._tmin<=8: ccl=min(ccl,self._numonline*7)
-      if self._tmin<=6: ccl=min(ccl,self._numonline*5)
-      if self._tmin<=5: ccl=min(ccl,self._numonline*3)
-      if self._tmin<=4: ccl=min(ccl,self._numonline*2)
+      if self._tmin<=10: ccl=min(ccl,self._numonline*12)
+      if self._tmin<=8: ccl=min(ccl,self._numonline*9)
+      if self._tmin<=6: ccl=min(ccl,self._numonline*7)
+      if self._tmin<=5: ccl=min(ccl,self._numonline*5)
+      if self._tmin<=4: ccl=min(ccl,self._numonline*3)
       if self._tmin<=3: ccl=min(ccl,self._numonline*1)
       if self._tmin<=2: ccl=min(ccl,self._numonline*0.5)
       if self._tmin<=1: ccl=0
+
+      vdiff=self._vmax-self._vmin
+      if vdiff>=0.100: dcl=min(dcl,self._numonline*12)
+      if vdiff>=0.150: dcl=min(dcl,self._numonline*7)
+      if vdiff>=0.200: dcl=0
+
+      if self._vmin<=2.60:
+        self._dbusservice['/Info/ChargeRequest']=1
+        ccl=max(ccl,self._numonline*1)
+      else:
+        self._dbusservice['/Info/ChargeRequest']=0
 
       #print("b ccl:",ccl," dcl:",dcl)
       if ccl>self._ccl+1: ccl=self._ccl+1
@@ -437,6 +448,7 @@ def main():
       '/Info/MaxChargeCurrent': {'initial': None, 'textformat': _a},
       '/Info/MaxChargeVoltage': {'initial': None, 'textformat': _v},
       '/Info/MaxDischargeCurrent': {'initial': None, 'textformat': _a},
+      '/Info/ChargeRequest': {'initial': None, 'textformat': _n},
     }
 
   pvac_output = BMSService(servicename='com.victronenergy.battery.ttyO0',deviceinstance=40,paths=_paths)
