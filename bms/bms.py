@@ -177,9 +177,13 @@ class BMSService:
       if self._tmin<=1: ccl=0
 
       vdiff=self._vmax-self._vmin
-      if vdiff>=0.100: dcl=min(dcl,self._numonline*12)
-      if vdiff>=0.150: dcl=min(dcl,self._numonline*7)
-      if vdiff>=0.200: dcl=0
+      if self._vmin < 3.10 and vdiff>=0.100: dcl=min(dcl,self._numonline*12)
+      if self._vmin < 3.10 and vdiff>=0.150: dcl=min(dcl,self._numonline*7)
+      if self._vmin < 3.10 and vdiff>=0.200: dcl=0
+      if self._vmax > 3.45 and vdiff>=0.100: ccl=min(dcl,self._numonline*12)
+      if self._vmax > 3.45 and vdiff>=0.150: ccl=min(dcl,self._numonline*7)
+      if self._vmax > 3.45 and vdiff>=0.200: ccl=0
+
 
       if self._vmin<=2.60:
         self._dbusservice['/Info/ChargeRequest']=1
