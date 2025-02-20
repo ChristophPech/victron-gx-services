@@ -79,8 +79,8 @@ class BMSService:
 
     if msg.arbitration_id == 0x370 : 
       if msg.dlc < 8 : return
-      t_h=int.from_bytes([msg.data[0], msg.data[1]], byteorder='little', signed=False)
-      t_l=int.from_bytes([msg.data[2], msg.data[3]], byteorder='little', signed=False)
+      t_h=int.from_bytes([msg.data[0], msg.data[1]], byteorder='little', signed=True)
+      t_l=int.from_bytes([msg.data[2], msg.data[3]], byteorder='little', signed=True)
       v_h=int.from_bytes([msg.data[4], msg.data[5]], byteorder='little', signed=False)
       v_l=int.from_bytes([msg.data[6], msg.data[7]], byteorder='little', signed=False)
       self._vmin = float(v_l)/1000
@@ -215,7 +215,7 @@ class BMSService:
       if msg.dlc < 6 : return
       v=int.from_bytes([msg.data[0], msg.data[1]], byteorder='little', signed=False)
       c=int.from_bytes([msg.data[2], msg.data[3]], byteorder='little', signed=True)
-      t=int.from_bytes([msg.data[4], msg.data[5]], byteorder='little', signed=False)
+      t=int.from_bytes([msg.data[4], msg.data[5]], byteorder='little', signed=True)
       self._dbusservice['/Dc/0/Temperature'] = float(t)/10
       self._dbusservice['/Dc/0/Voltage'] = float(v)/100
       self._dbusservice['/Dc/0/Current'] = float(c)/10
